@@ -205,7 +205,8 @@ namespace ETWManifest
                 reader.Read();      // Advance to children 
                 var curTask = GlobalScope;
                 var curTaskDepth = int.MaxValue;
-                while (inputDepth < reader.Depth)
+                //while (inputDepth < reader.Depth)
+                while (!reader.EOF)
                 {
                     if (reader.NodeType == XmlNodeType.Element)
                     {
@@ -245,13 +246,13 @@ namespace ETWManifest
                                     if (message == null)
                                         message = name;
 
-                                    m_taskNames.Add(value, message);
+                                    m_taskNames.Add(value, name);
                                     m_taskValues.Add(name, value);
 
                                     // Remember enuough to resolve opcodes nested inside this task.  
                                     curTask = value;
                                     curTaskDepth = reader.Depth;
-                                    reader.Skip();
+                                    reader.Read();
                                 } break;
                             case "opcode":
                                 {
@@ -329,7 +330,8 @@ namespace ETWManifest
             m_opcodeNames.Add(value, name);
             if (manifestName == null)
                 manifestName = name;
-            m_opcodeValues.Add(manifestName, value);
+           if(!m_opcodeValues.TryGetValue(manifestName, out value))
+                m_opcodeValues.Add(manifestName, value);
         }
 
         internal static ulong ParseNumber(string valueString)
@@ -462,6 +464,27 @@ namespace ETWManifest
                 }
                 if (!reader.Read())
                     break;
+            }
+
+            //when the manifest does not provide an AddressLen field for Binary addresses we need to fix the field,
+            //otherwise instead of 
+            //        public byte[] Address { get { return GetByteArrayAt(HostOffset(36, 3), AddressLen); } }
+            // we get this and the class does not build
+            //        public byte[] Address { get { return GetByteArrayAt(HostOffset(8, 2)); } }
+            if (template.Exists(x=>x.Name=="Address" && x.Type.EndsWith("Binary")) &&
+                !template.Exists(x=>x.Name== "AddressLen"))
+            {
+                var address = template.Find(x => x.Name == "Address");
+                var fixedAddress = new Field(address.Name, address.Type, address.m_mapId, "AddressLen");
+
+                //and we need a new field: AddressLen, that is always in the same format
+                var addressLen = new Field("AddressLen", "win:UInt32", null);
+
+
+                //replace the wrong address with the fixed version
+                template.Remove(address);
+                template.Add(fixedAddress);
+                template.Add(addressLen);
             }
         }
 
