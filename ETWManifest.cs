@@ -35,24 +35,26 @@ namespace ETWManifest
             }
 
             // Resolve all the localization strings that may have been used.  
-            var stringMap = new Dictionary<string, string>();
-            while (reader.Read())
-            {
-                if (reader.NodeType == XmlNodeType.Element && reader.Name == "string")
-                {
-                    var id = reader.GetAttribute("id");
-                    var value = reader.GetAttribute("value");
-                    stringMap[id] = value;
-                }
-            }
-            if (0 < stringMap.Count)
+            //m_stringMap = new Dictionary<string, string>();
+            //while (reader.Read())
+            //{
+            //    if (reader.NodeType == XmlNodeType.Element && reader.Name == "string")
+            //    {
+            //        var id = reader.GetAttribute("id");
+            //        var value = reader.GetAttribute("value");
+            //        m_stringMap[id] = value;
+            //    }
+            //}
+
+            // Resolve all the localization strings that may have been used.  
+            if (0 < m_stringMap.Count)
             {
                 foreach (var provider in ret)
                 {
                     if (provider.m_keywordNames != null)
                     {
                         for (int i = 0; i < provider.m_keywordNames.Length; i++)
-                            Provider.Replace(ref provider.m_keywordNames[i], stringMap);
+                            Provider.Replace(ref provider.m_keywordNames[i], m_stringMap);
                     }
 
                     if (provider.m_taskNames != null)
@@ -60,7 +62,7 @@ namespace ETWManifest
                         foreach (var taskId in new List<int>(provider.m_taskNames.Keys))
                         {
                             var taskName = provider.m_taskNames[taskId];
-                            if (Provider.Replace(ref taskName, stringMap))
+                            if (Provider.Replace(ref taskName, m_stringMap))
                                 provider.m_taskNames[taskId] = taskName;
                         }
                     }
@@ -70,13 +72,13 @@ namespace ETWManifest
                         foreach (var opcodeId in new List<int>(provider.m_opcodeNames.Keys))
                         {
                             var opcodeName = provider.m_opcodeNames[opcodeId];
-                            if (Provider.Replace(ref opcodeName, stringMap))
+                            if (Provider.Replace(ref opcodeName, m_stringMap))
                                 provider.m_opcodeNames[opcodeId] = opcodeName;
                         }
                     }
 
                     foreach (Event ev in provider.Events)
-                        ev.UpdateStrings(stringMap);
+                        ev.UpdateStrings(m_stringMap);
                 }
             }
 
@@ -281,6 +283,16 @@ namespace ETWManifest
                                 break;
                             case "valueMap":
                                 ReadMap(reader, false);
+                                break;
+
+                            case "string":
+                                if (m_stringMap == null)
+                                    m_stringMap = new Dictionary<string, string>();
+
+                                var id = reader.GetAttribute("id");
+                                var stringValue = reader.GetAttribute("value");
+                                m_stringMap[id] = stringValue;
+                                reader.Read();
                                 break;
                             default:
                                 Debug.WriteLine("Skipping unknown element {0}", reader.Name);
@@ -501,6 +513,7 @@ namespace ETWManifest
         internal Dictionary<string, ulong> m_keywordValues;
         internal Dictionary<string, List<Field>> m_templateValues;
         internal Dictionary<string, Enumeration> m_enums;
+        private static Dictionary<string, string> m_stringMap;
         #endregion
     }
 
