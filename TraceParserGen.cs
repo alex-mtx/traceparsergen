@@ -420,7 +420,7 @@ class TraceParserGen
                 }
             }
 
-            AddGetFormattedMessageMethod(output, eventName);
+            AddGetFormattedMessageMethodOverride(output, eventName);
 
             output.WriteLine("");
             output.WriteLine("        #region Private");
