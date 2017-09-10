@@ -342,7 +342,7 @@ namespace ETWManifest
             m_opcodeNames.Add(value, name);
             if (manifestName == null)
                 manifestName = name;
-           if(!m_opcodeValues.TryGetValue(manifestName, out value))
+           if(!m_opcodeValues.ContainsKey(manifestName))
                 m_opcodeValues.Add(manifestName, value);
         }
 
