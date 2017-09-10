@@ -5,6 +5,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 class TraceParserGen
 {
@@ -419,6 +420,8 @@ class TraceParserGen
                 }
             }
 
+            AddGetFormattedMessageMethodOverride(output, eventName);
+
             output.WriteLine("");
             output.WriteLine("        #region Private");
 
@@ -532,6 +535,40 @@ class TraceParserGen
             output.WriteLine("    }");
         }
 
+    }
+
+    private void AddGetFormattedMessageMethodOverride(TextWriter output, string eventName)
+    {
+        Event @event = m_provider.Events.FirstOrDefault(e => e.EventName == eventName);
+        if (@event == null || @event.Message == null)
+        {
+            return;
+        }
+
+        output.WriteLine("");
+        output.WriteLine("        public override string GetFormattedMessage(IFormatProvider formatProvider)");
+        output.WriteLine("        {");
+
+        List<string> stringFormatArgs = new List<string>();
+
+        string messageFormat = @event.Message;
+        MatchCollection matches = new Regex(@"%(\d)").Matches(@event.Message);
+        for (int count = matches.Count - 1; count >= 0; count--)
+        {
+            Match match = matches[count];
+            string matchedEventArgumentIndex = match.Groups[1].Value;   // Note: group with index 0 is the entire match result
+            int eventPayloadIndex = int.Parse(matchedEventArgumentIndex) - 1;   // Index in EventSource is 1-based, while index in TraceEventParser is 0-based!
+
+            stringFormatArgs.Insert(0, "PayloadValue(" + eventPayloadIndex + ")");
+
+            string matchReplacement = "{" + count + "}";
+            messageFormat = messageFormat.Substring(0, match.Index) + matchReplacement + messageFormat.Substring(match.Index + match.Length);
+        }
+
+        string formatArgsString = stringFormatArgs.Any() ? ", " + string.Join(", ", stringFormatArgs) : string.Empty;
+        string formatStatement = @"            return string.Format(formatProvider, """ + messageFormat + @"""" + formatArgsString + ");";
+        output.WriteLine(formatStatement);
+        output.WriteLine("        }");
     }
 
     /// <summary>
