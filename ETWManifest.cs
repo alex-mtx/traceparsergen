@@ -483,8 +483,11 @@ namespace ETWManifest
             //        public byte[] Address { get { return GetByteArrayAt(HostOffset(36, 3), AddressLen); } }
             // we get this and the class does not build
             //        public byte[] Address { get { return GetByteArrayAt(HostOffset(8, 2)); } }
+            // check for both AddressLen and AddressLength. either are used depending on the manifest.
+            // examples that use AddressLen: Microsoft-Windows-QoS-qWAVE and Microsoft-Windows-Winsock-AFD
+            // examples that use AddressLength: Microsoft-Windows-DNS-Client and Microsoft-Windows-HttpService
             if (template.Exists(x=>x.Name=="Address" && x.Type.EndsWith("Binary")) &&
-                !template.Exists(x=>x.Name== "AddressLen"))
+                !template.Exists(x=>x.Name== "AddressLen" || x.Name=="AddressLength"))
             {
                 var address = template.Find(x => x.Name == "Address");
                 var fixedAddress = new Field(address.Name, address.Type, address.m_mapId, "AddressLen");
